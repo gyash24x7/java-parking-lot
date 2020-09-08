@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class ParkingLot {
-	private List< Floor > floors;
+	private final List< Floor > floors;
 
 	public ParkingLot( int floorCount, int premiumSpacesPerFloor, int nonPremiumSpacesPerFloor ) {
 		this.floors = new LinkedList<>();

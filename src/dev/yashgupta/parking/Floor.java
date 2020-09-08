@@ -4,13 +4,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class Floor {
-	//	private final String floorId;
 	private final int floorNumber;
 	private boolean isReserved;
-	private List< ParkingSpace > parkingSpaces;
+	private final List< ParkingSpace > parkingSpaces;
 
 	public Floor( int premiumSpaceCount, int nonPremiumSpaceCount, int floorNumber ) {
-//		this.floorId = floorId;
 		this.floorNumber = floorNumber;
 		this.isReserved = false;
 		this.parkingSpaces = new LinkedList<>();
@@ -23,11 +21,6 @@ public class Floor {
 			this.parkingSpaces.add( new ParkingSpace( i + 1 ) );
 		}
 	}
-
-//	public String getFloorId() {
-//		return floorId;
-//	}
-
 
 	public int getFloorNumber() {
 		return floorNumber;
@@ -52,7 +45,9 @@ public class Floor {
 	public void printDescription() {
 		List< ParkingSpace > availablePremiumSpaces = getAvailablePremiumSpaces();
 		List< ParkingSpace > availableNonPremiumSpaces = getAvailableNonPremiumSpaces();
-		System.out.println( "Available Spaces on Floor: " + ( availablePremiumSpaces.size() ) + " Premium\t" +
+
+		System.out.println( "Available Spaces on Floor " + ( getFloorNumber() ) + ": " +
+				( availablePremiumSpaces.size() ) + " Premium\t" +
 				( availableNonPremiumSpaces.size() ) + " Non-Premium" );
 	}
 
@@ -63,7 +58,7 @@ public class Floor {
 
 	public List< ParkingSpace > getAvailablePremiumSpaces() {
 		List< ParkingSpace > availableNonPremiumSpaces = getAvailableNonPremiumSpaces();
-		List< ParkingSpace > availablePremiumSpaces = new LinkedList<>( this.parkingSpaces );
+		List< ParkingSpace > availablePremiumSpaces = new LinkedList<>( getParkingSpaces() );
 		availablePremiumSpaces.removeIf( ParkingSpace::isOccupied );
 		availablePremiumSpaces.removeAll( availableNonPremiumSpaces );
 
@@ -71,7 +66,7 @@ public class Floor {
 	}
 
 	public List< ParkingSpace > getAvailableNonPremiumSpaces() {
-		List< ParkingSpace > availableNonPremiumSpaces = new LinkedList<>( this.parkingSpaces );
+		List< ParkingSpace > availableNonPremiumSpaces = new LinkedList<>( getParkingSpaces() );
 		availableNonPremiumSpaces.removeIf( ParkingSpace::isOccupied );
 		availableNonPremiumSpaces.removeIf( ParkingSpace::isPremium );
 
