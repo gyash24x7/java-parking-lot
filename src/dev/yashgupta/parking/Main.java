@@ -1,146 +1,80 @@
 package dev.yashgupta.parking;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.InputMismatchException;
-import java.util.List;
+import java.util.Properties;
 import java.util.Scanner;
 
 public class Main {
 
 	static final Scanner sc = new Scanner( System.in );
+	static final Properties props = new Properties();
 
-	public static void main( String[] args ) {
-		int floorCount, premiumSpacesPerFloor, nonPremiumSpacesPerFloor;
+	public static void main( String[] args ) throws SQLException {
+		readFromProperties();
 
-		while ( true ) {
-			try {
-				System.out.print( "Enter no. of floors: " );
-				floorCount = sc.nextInt();
-				break;
-			} catch ( InputMismatchException e ) {
-				System.out.println( "Invalid Input!" );
-				System.out.println( "Please try again!\n" );
-				sc.nextLine();
-			}
-		}
+		int floorCount = Integer.parseInt( ( String ) props.get( "floorCount" ) );
+		int premiumSpacesPerFloor = Integer.parseInt( ( String ) props.get( "premiumSpacesPerFloor" ) );
+		int nonPremiumSpacesPerFloor = Integer.parseInt( ( String ) props.get( "nonPremiumSpacesPerFloor" ) );
+		String dbUrl = ( String ) props.get( "dbUrl" );
+		String dbUser = ( String ) props.get( "dbUser" );
+		String dbPassword = ( String ) props.get( "dbPassword" );
 
-		while ( true ) {
-			try {
-				System.out.print( "Enter no. of premium parking spaces per floor: " );
-				premiumSpacesPerFloor = sc.nextInt();
-				break;
-			} catch ( InputMismatchException e ) {
-				System.out.println( "Invalid Input!" );
-				System.out.println( "Please try again!\n" );
-				sc.nextLine();
-			}
-		}
+		Db db = new Db( dbUrl, dbUser, dbPassword );
+
+		ParkingLot parkingLot = new ParkingLot( "Awesome Parking Lot", 1, floorCount, premiumSpacesPerFloor,
+				nonPremiumSpacesPerFloor );
+		System.out.println( "\n------  Welcome to Awesome Parking Lot  ------" );
 
 		while ( true ) {
-			try {
-				System.out.print( "Enter no. of non-premium parking spaces per floor: " );
-				nonPremiumSpacesPerFloor = sc.nextInt();
-				break;
-			} catch ( InputMismatchException e ) {
-				System.out.println( "Invalid Input!" );
-				System.out.println( "Please try again!\n" );
-				sc.nextLine();
-			}
-		}
-
-
-		System.out.println( "\n" );
-		ParkingLot parkingLot = new ParkingLot( floorCount, premiumSpacesPerFloor, nonPremiumSpacesPerFloor );
-		parkingLot.printDescription();
-
-
-		Floor floor = selectFloorFromFloors( parkingLot.getFloors() );
-		floor.printDescription();
-
-		boolean requirePremium = false;
-
-		if ( floor.isPremiumSpaceAvailable() ) {
-			System.out.println( "\nThere are premium spaces available on this floor." );
-			System.out.println( "Do you want to use a premium space?" );
-
+			int choice;
 			while ( true ) {
+				System.out.println( "\nChoose from following : " );
+				System.out.println( "1) Park your vehicle" );
+				System.out.println( "2) Move your parked vehicle" );
+				System.out.println( "3) Exit the Parking Lot" );
+				System.out.print( "Enter your choice: " );
+
 				try {
-					System.out.print( "Enter 1 for yes and else for no. Ans: " );
-					requirePremium = sc.nextInt() == 1;
+					choice = sc.nextInt();
+					if ( choice != 1 && choice != 2 && choice != 3 ) {
+						throw new InvalidInputException();
+					}
 					break;
-				} catch ( InputMismatchException e ) {
+				} catch ( InputMismatchException | InvalidInputException e ) {
 					System.out.println( "Invalid Input!" );
 					System.out.println( "Please try again!\n" );
 					sc.nextLine();
 				}
 			}
 
-		}
+			if ( choice == 1 ) {
+				boolean isParkSuccessful = parkingLot.park();
 
-		System.out.println( "You chose " + ( requirePremium ? "Premium" : "Non-Premium" ) + " Space." );
-
-		ParkingSpace space = selectSpaceFromSpaces(
-				requirePremium ? floor.getAllPremiumSpaces() : floor.getAllNonPremiumSpaces() );
-
-		space.occupy();
-		System.out.println( "You have occupied Parking Space " + space.getSpaceNumber() + " on Floor " +
-				floor.getFloorNumber() + "." );
-
-	}
-
-	public static Floor selectFloorFromFloors( List< Floor > floors ) {
-		int floorNumber;
-
-		while ( true ) {
-			try {
-				System.out.print( "\nEnter floor number: " );
-				floorNumber = sc.nextInt();
-				if ( floorNumber > 0 && floorNumber <= floors.size() ) {
-					break;
-				} else {
-					System.out.println( "Invalid floor number entered!" );
-					System.out.println();
+				if ( isParkSuccessful ) {
+					System.out.println( "Park Successful!" );
 				}
-			} catch ( InputMismatchException e ) {
-				System.out.println( "Invalid Input!" );
-				System.out.println( "Please try again!\n" );
-				sc.nextLine();
-			}
-		}
-
-		return floors.get( floorNumber - 1 );
-	}
-
-	public static ParkingSpace selectSpaceFromSpaces( List< ParkingSpace > spaces ) {
-		int spaceNumber;
-
-		System.out.println( "\nAll Spaces: " );
-		for ( ParkingSpace space : spaces ) {
-			System.out.println( "Space " + space.getSpaceNumber() + ": \t" +
-					( space.isOccupied() ? "Occupied" : "Unoccupied" ) );
-		}
-
-		while ( true ) {
-			try {
-				System.out.print( "\nEnter Space Number: " );
-				spaceNumber = sc.nextInt();
-
-				if ( spaceNumber > 0 && spaceNumber <= spaces.size() ) {
-					if ( spaces.get( spaceNumber - 1 ).isOccupied() ) {
-						System.out.println( "This space is already Occupied! Choose another." );
-					} else {
-						break;
-					}
-				} else {
-					System.out.println( "Invalid Parking Space Number entered!" );
-				}
-			} catch ( InputMismatchException e ) {
-				System.out.println( "Invalid Input!" );
-				System.out.println( "Please try again!\n" );
-				sc.nextLine();
 			}
 
+			if ( choice == 3 ) {
+				parkingLot.exit();
+				break;
+			}
 		}
+	}
 
-		return spaces.get( spaceNumber - 1 );
+	public static void readFromProperties() {
+		File configFile = new File( "config.properties" );
+		try ( FileReader reader = new FileReader( configFile ) ) {
+			props.load( reader );
+		} catch ( FileNotFoundException e ) {
+			System.out.println( "Config File not found! Exiting. Bye!" );
+		} catch ( IOException e ) {
+			System.out.println( "Exception occurred! " + e.getMessage() );
+		}
 	}
 }
