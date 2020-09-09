@@ -1,5 +1,7 @@
 package dev.yashgupta.parking;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.InputMismatchException;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,15 +10,43 @@ import java.util.Scanner;
 public class ParkingLot implements Parkable {
 	private final List< Floor > floors;
 	private final String name;
+	private int floorCount;
+	private int premiumSpacesPerFloor;
+	private int nonPremiumSpacesPerFloor;
 	private final int id;
 	private static final Scanner sc = new Scanner( System.in );
 
-	public ParkingLot( String name, int id, int floorCount, int premiumSpacesPerFloor, int nonPremiumSpacesPerFloor ) {
+	public ParkingLot( ParkingLot parkingLot ) throws SQLException {
+		this.id = parkingLot.getId();
+		this.name = parkingLot.getName();
+		this.premiumSpacesPerFloor = parkingLot.getPremiumSpacesPerFloor();
+		this.nonPremiumSpacesPerFloor = parkingLot.getNonPremiumSpacesPerFloor();
+		this.floorCount = parkingLot.getFloorCount();
+
+		Db db = new Db();
 		this.floors = new LinkedList<>();
-		this.name = name;
-		this.id = id;
+
 		for ( int i = 0; i < floorCount; i++ ) {
-			this.floors.add( new Floor( premiumSpacesPerFloor, nonPremiumSpacesPerFloor, i + 1 ) );
+			Floor floor = db.createNewFloor( i + 1, this.id );
+			if ( floor != null ) {
+				this.floors.add( new Floor( floor, premiumSpacesPerFloor, nonPremiumSpacesPerFloor ) );
+			}
+		}
+	}
+
+	public ParkingLot( ResultSet res ) throws SQLException {
+		this.id = Integer.parseInt( res.getString( 5 ) );
+		this.name = res.getString( 1 );
+		this.floorCount = Integer.parseInt( res.getString( 2 ) );
+		this.premiumSpacesPerFloor = Integer.parseInt( res.getString( 3 ) );
+		this.nonPremiumSpacesPerFloor = Integer.parseInt( res.getString( 4 ) );
+
+		Db db = new Db();
+		List< Floor > floors = db.getFloors( this.id );
+		if ( floors != null ) {
+			this.floors = floors;
+		} else {
+			this.floors = new LinkedList<>();
 		}
 	}
 
@@ -24,12 +54,32 @@ public class ParkingLot implements Parkable {
 		return id;
 	}
 
+	public List< Floor > getFloors() {
+		return floors;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public int getFloorCount() {
+		return floorCount;
+	}
+
+	public int getPremiumSpacesPerFloor() {
+		return premiumSpacesPerFloor;
+	}
+
+	public int getNonPremiumSpacesPerFloor() {
+		return nonPremiumSpacesPerFloor;
+	}
+
 	public void printAvailability() {
 		System.out.println( "\n------         Available Spaces         ------\n" );
 		for ( Floor floor : floors ) {
 			System.out.println( "Floor " + ( floor.getFloorNumber() ) + ": " +
 					( floor.getAvailablePremiumSpaces().size() ) + " Premium    " +
-					( floor.getAvailableNonPremiumSpaces().size() ) + " Non-Premium" );
+					( floor.getAvailableNonPremiumSpaces().size() ) + " Non-Premium\n" );
 		}
 	}
 

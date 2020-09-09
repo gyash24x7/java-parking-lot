@@ -1,9 +1,8 @@
 package dev.yashgupta.parking;
 
-import java.util.InputMismatchException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Scanner;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Floor implements Parkable {
@@ -20,12 +19,42 @@ public class Floor implements Parkable {
 		this.parkingSpaces = new LinkedList<>();
 	}
 
+	public Floor( Floor floor, int premiumSpacesPerFloor, int nonPremiumSpacesPerFloor ) throws SQLException {
+		this.id = floor.getId();
+		this.parkingLotId = floor.getParkingLotId();
+		this.floorNumber = floor.getFloorNumber();
+
+		Db db = new Db();
+		this.parkingSpaces = new LinkedList<>();
+
+		for ( int i = 0; i < premiumSpacesPerFloor + nonPremiumSpacesPerFloor; i++ ) {
+			ParkingSpace space = db.createNewParkingSpace( i + 1, this.id, i < premiumSpacesPerFloor );
+			if ( space != null ) {
+				this.parkingSpaces.add( space );
+			}
+		}
+	}
+
+	public Floor( ResultSet res ) throws SQLException {
+		this.id = Integer.parseInt( res.getString( 2 ) );
+		this.floorNumber = Integer.parseInt( res.getString( 1 ) );
+		this.parkingLotId = Integer.parseInt( res.getString( 3 ) );
+
+		Db db = new Db();
+		List< ParkingSpace > spaces = db.getParkingSpaces( this.id );
+		this.parkingSpaces = Objects.requireNonNullElseGet( spaces, LinkedList::new );
+	}
+
 	public int getFloorNumber() {
 		return floorNumber;
 	}
 
 	public int getId() {
 		return id;
+	}
+
+	public int getParkingLotId() {
+		return parkingLotId;
 	}
 
 	public void printAvailability() {
@@ -84,7 +113,7 @@ public class Floor implements Parkable {
 
 			if ( premiumChoice != 3 ) {
 				space = selectSpace( premiumChoice == 1 );
-				space.occupy( getFloorNumber() );
+				space.occupy();
 				return true;
 			}
 		}

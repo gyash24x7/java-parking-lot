@@ -1,24 +1,25 @@
 package dev.yashgupta.parking;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Scanner;
 
 public class ParkingSpace {
 	private boolean isOccupied;
-	private boolean isPremium;
+	private final boolean isPremium;
 	private final int spaceNumber;
 	private final int id;
 	private final int floorId;
 
 	private static final Scanner sc = new Scanner( System.in );
 
-	public ParkingSpace( int spaceNumber, int spaceId, boolean isPremium, boolean isOccupied, int floorId ) {
-		this.spaceNumber = spaceNumber;
-		this.isOccupied = isOccupied;
-		this.isPremium = isPremium;
-		this.id = spaceId;
-		this.floorId = floorId;
+	public ParkingSpace( ResultSet res ) throws SQLException {
+		this.id = Integer.parseInt( res.getString( 2 ) );
+		this.floorId = Integer.parseInt( res.getString( 3 ) );
+		this.spaceNumber = Integer.parseInt( res.getString( 1 ) );
+		this.isPremium = Boolean.parseBoolean( res.getString( 4 ) );
+		this.isOccupied = Boolean.parseBoolean( res.getString( 5 ) );
 	}
-
 
 	public int getId() {
 		return id;
@@ -44,11 +45,11 @@ public class ParkingSpace {
 		return !isOccupied;
 	}
 
-	public void occupy( int floorNumber ) {
+	public void occupy() {
 		System.out.println( "Enter your vehicle number: " );
 		String vehicleNumber = sc.nextLine();
-		ParkingTicket ticket = new ParkingTicket( vehicleNumber, floorNumber, spaceNumber, 1 );
-		printTicketDetails( ticket );
+//		ParkingTicket ticket = new ParkingTicket( vehicleNumber, floorNumber, spaceNumber );
+//		printTicketDetails( ticket );
 		this.isOccupied = true;
 	}
 

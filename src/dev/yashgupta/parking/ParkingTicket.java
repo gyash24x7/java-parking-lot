@@ -1,5 +1,7 @@
 package dev.yashgupta.parking;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 
@@ -8,18 +10,19 @@ public class ParkingTicket {
 	private String vehicleNumber;
 	private Timestamp generatedTime;
 	private boolean isBillPending;
-	private int parkingLotId;
-	private int floorId;
 	private int spaceId;
 
-	public ParkingTicket( String vehicleNumber, int floorId, int spaceId, int parkingLotId ) {
-		this.id = 3;
+	public ParkingTicket( String vehicleNumber, int id, int spaceId ) {
+		this.id = id;
 		this.vehicleNumber = vehicleNumber;
 		this.isBillPending = true;
 		this.generatedTime = new Timestamp( new Date().getTime() );
-		this.floorId = floorId;
 		this.spaceId = spaceId;
-		this.parkingLotId = parkingLotId;
+	}
+
+	public ParkingTicket( ResultSet res ) throws SQLException {
+		this.vehicleNumber = res.getString( 1 );
+		this.spaceId = Integer.parseInt( res.getString( 3 ) );
 	}
 
 	public int getId() {

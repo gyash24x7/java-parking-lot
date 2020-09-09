@@ -1,18 +1,13 @@
 package dev.yashgupta.parking;
 
 import java.sql.*;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Db {
-	private final String url;
-	private final String user;
-	private final String password;
 	private static Connection connection;
 
 	public Db( String url, String user, String password ) throws SQLException {
-		this.url = url;
-		this.user = user;
-		this.password = password;
-
 		try {
 			connection = DriverManager.getConnection( url, user, password );
 			System.out.println( "Connected to DB Successfully!" );
@@ -22,6 +17,9 @@ public class Db {
 		}
 
 		setup();
+	}
+
+	public Db() {
 	}
 
 	public static void setup() throws SQLException {
@@ -34,89 +32,124 @@ public class Db {
 					"CREATE TABLE IF NOT EXISTS spaces (spaceNumber INT, id INT GENERATED ALWAYS AS IDENTITY, floorId INT, isPremium BOOLEAN NOT NULL DEFAULT FALSE, isOccupied BOOLEAN NOT NULL DEFAULT FALSE, PRIMARY KEY(id), CONSTRAINT fk_floor FOREIGN KEY(floorId) REFERENCES floors(id))" );
 			statement.execute(
 					"CREATE TABLE IF NOT EXISTS tickets (vehicleNumber VARCHAR , id INT GENERATED ALWAYS AS IDENTITY, spaceId INT, PRIMARY KEY(id), CONSTRAINT fk_space FOREIGN KEY(spaceId) REFERENCES spaces(id))" );
-		} catch ( SQLException e ) {
-			System.out.println( "Unable to Create Tables!" );
-			throw e;
 		}
 	}
 
-	public void createNewParkingLot() throws SQLException {
+	public ParkingLot createNewParkingLot( String name, int floorCount, int premiumSpacesPerFloor, int nonPremiumSpacesPerFloor ) throws SQLException {
 		try ( Statement statement = connection.createStatement() ) {
-			statement.execute(
-					"INSERT INTO parkinglots(name, floorCount, premiumSpacesPerFloor, nonPremiumSpacesPerFloor) VALUES('AWESOME PARKING', 3, 5 ,10)" );
-		} catch ( SQLException e ) {
-			System.out.println( "Unable to Create New Parking Lot!" );
-			throw e;
+			ResultSet res = statement.executeQuery(
+					"INSERT INTO parkinglots(name, floorCount, premiumSpacesPerFloor, nonPremiumSpacesPerFloor) VALUES('" + ( name ) + "', " + ( floorCount ) + ", " + ( premiumSpacesPerFloor ) + ", " + ( nonPremiumSpacesPerFloor ) + ") RETURNING id" );
+			if ( res.next() ) {
+				int id = Integer.parseInt( res.getString( 1 ) );
+				return getParkingLot( id );
+			}
 		}
+
+		return null;
 	}
 
-	public ParkingLot findParkingLotWithId( int id ) throws SQLException {
+	public Floor createNewFloor( int floorNumber, int parkingLotId ) throws SQLException {
+		try ( Statement statement = connection.createStatement() ) {
+			ResultSet res = statement.executeQuery(
+					"INSERT INTO floors(floorNumber, parkingLotId) VALUES(" + ( floorNumber ) + ", " + parkingLotId + ") RETURNING id" );
+			if ( res.next() ) {
+				int id = Integer.parseInt( res.getString( 1 ) );
+				return getFloor( id );
+			}
+		}
+
+		return null;
+	}
+
+	public ParkingSpace createNewParkingSpace( int spaceNumber, int floorId, boolean isPremium ) throws SQLException {
+		try ( Statement statement = connection.createStatement() ) {
+			ResultSet res = statement.executeQuery(
+					"INSERT INTO spaces(spaceNumber, floorId, isPremium, isOccupied) VALUES(" + ( spaceNumber ) + ", " + ( floorId ) + ", " + ( isPremium ) + ", " + ( false ) + ") RETURNING id" );
+			if ( res.next() ) {
+				int id = Integer.parseInt( res.getString( 1 ) );
+				return getParkingSpace( id );
+			}
+		}
+
+		return null;
+	}
+
+	public ParkingTicket createNewParkingTicket( int vehicleNumber, int spaceId ) throws SQLException {
+		try ( Statement statement = connection.createStatement() ) {
+			ResultSet res = statement.executeQuery(
+					"INSERT INTO spaces(vehicleNumber, spaceId) VALUES(" + ( vehicleNumber ) + ", " + spaceId + ")" );
+			if ( res.next() ) {
+				return new ParkingTicket( res );
+			}
+		}
+
+		return null;
+	}
+
+	public ParkingLot getParkingLot( int id ) throws SQLException {
 		try ( Statement statement = connection.createStatement() ) {
 			ResultSet res = statement.executeQuery( "SELECT * FROM parkinglots WHERE id=" + id );
 			if ( res.next() ) {
-				String name = res.getString( 1 );
-				int floorCount = Integer.parseInt( res.getString( 2 ) );
-				int premiumSpacesPerFloor = Integer.parseInt( res.getString( 3 ) );
-				int nonPremiumSpacesPerFloor = Integer.parseInt( res.getString( 4 ) );
-				return new ParkingLot( name, id, floorCount, premiumSpacesPerFloor, nonPremiumSpacesPerFloor );
+				return new ParkingLot( res );
 			}
-		} catch ( SQLException e ) {
-			System.out.println( "Parking Lot Not Found!" );
-			throw e;
 		}
 
 		return null;
 	}
 
-	public ParkingSpace findParkingSpaceWithId( int id ) throws SQLException {
+	public List< Floor > getFloors( int parkingLotId ) throws SQLException {
+		List< Floor > floors = new LinkedList<>();
 		try ( Statement statement = connection.createStatement() ) {
-			ResultSet res = statement.executeQuery( "SELECT * FROM spaces WHERE id=" + id );
-			if ( res.next() ) {
-				int spaceNumber = Integer.parseInt( res.getString( 1 ) );
-				int floorId = Integer.parseInt( res.getString( 3 ) );
-				boolean isPremium = Boolean.parseBoolean( res.getString( 4 ) );
-				boolean isOccupied = Boolean.parseBoolean( res.getString( 5 ) );
-				return new ParkingSpace( spaceNumber, id, isPremium, isOccupied, floorId );
+			ResultSet res = statement.executeQuery( "SELECT * FROM floors WHERE parkinglotid=" + parkingLotId );
+			while ( res.next() ) {
+				floors.add( new Floor( res ) );
 			}
-		} catch ( SQLException e ) {
-			System.out.println( "Parking Lot Not Found!" );
-			throw e;
 		}
 
-		return null;
+		return floors;
 	}
 
-	public Floor findFloorWithId( int id ) throws SQLException {
+	public Floor getFloor( int id ) throws SQLException {
 		try ( Statement statement = connection.createStatement() ) {
 			ResultSet res = statement.executeQuery( "SELECT * FROM floors WHERE id=" + id );
 			if ( res.next() ) {
-				String name = res.getString( 1 );
-				int floorCount = Integer.parseInt( res.getString( 2 ) );
-				int premiumSpacesPerFloor = Integer.parseInt( res.getString( 3 ) );
-				int nonPremiumSpacesPerFloor = Integer.parseInt( res.getString( 4 ) );
-				return new Floor( name, id, floorCount, premiumSpacesPerFloor, nonPremiumSpacesPerFloor );
+				return new Floor( res );
 			}
-		} catch ( SQLException e ) {
-			System.out.println( "Parking Lot Not Found!" );
-			throw e;
 		}
 
 		return null;
 	}
 
-	public ParkingTicket findParkingTicketWithId( int id ) throws SQLException {
+	public List< ParkingSpace > getParkingSpaces( int floorId ) throws SQLException {
+		List< ParkingSpace > spaces = new LinkedList<>();
 		try ( Statement statement = connection.createStatement() ) {
-			ResultSet res = statement.executeQuery( "SELECT * FROM parkinglots WHERE id=" + id );
-			if ( res.next() ) {
-				String name = res.getString( 1 );
-				int floorCount = Integer.parseInt( res.getString( 2 ) );
-				int premiumSpacesPerFloor = Integer.parseInt( res.getString( 3 ) );
-				int nonPremiumSpacesPerFloor = Integer.parseInt( res.getString( 4 ) );
-				return new ParkingLot( name, id, floorCount, premiumSpacesPerFloor, nonPremiumSpacesPerFloor );
+			ResultSet res = statement.executeQuery( "SELECT * FROM spaces WHERE floorId=" + floorId );
+			while ( res.next() ) {
+				spaces.add( new ParkingSpace( res ) );
 			}
-		} catch ( SQLException e ) {
-			System.out.println( "Parking Lot Not Found!" );
-			throw e;
+		}
+
+		return spaces;
+	}
+
+	public ParkingSpace getParkingSpace( int id ) throws SQLException {
+		try ( Statement statement = connection.createStatement() ) {
+			ResultSet res = statement.executeQuery( "SELECT * FROM spaces WHERE id=" + id );
+			if ( res.next() ) {
+				return new ParkingSpace( res );
+			}
+		}
+
+		return null;
+	}
+
+
+	public ParkingTicket getParkingTicket( int id ) throws SQLException {
+		try ( Statement statement = connection.createStatement() ) {
+			ResultSet res = statement.executeQuery( "SELECT * FROM tickets WHERE id=" + id );
+			if ( res.next() ) {
+				return new ParkingTicket( res );
+			}
 		}
 
 		return null;
